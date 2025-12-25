@@ -1,0 +1,89 @@
+# Trading System Configuration
+
+# Data Settings
+data:
+  currency_pair: "AED/CNY"
+  data_source: "yfinance"  # yfinance, alpha_vantage, or screen_ocr
+  update_interval: 60  # seconds
+  lookback_period: 5  # years for historical data
+
+# Model Settings
+model:
+  type: "ensemble"  # lstm, transformer, ensemble
+  lookback_window: 60  # days of historical data for predictions
+  forecast_horizon: 5  # days ahead
+  confidence_threshold: 0.75  # minimum confidence for trade signals
+  cross_validation_folds: 5
+  ensemble_weights:
+    lstm: 0.4
+    xgboost: 0.3
+    lightgbm: 0.3
+
+# Technical Indicators
+indicators:
+  moving_averages:
+    - 20
+    - 50
+    - 200
+  rsi_period: 14
+  rsi_overbought: 70
+  rsi_oversold: 30
+  macd:
+    fast: 12
+    slow: 26
+    signal: 9
+  bollinger_bands_period: 20
+  bollinger_bands_std: 2
+  volume_period: 20
+
+# Risk Management
+risk:
+  account_balance: 10000  # base account balance in USD
+  risk_per_trade: 0.02  # 2% risk per trade
+  max_position_size: 0.10  # max 10% of account
+  stop_loss_atr_multiplier: 2.0
+  take_profit_ratio: 2.0  # risk:reward ratio of 1:2
+  max_open_positions: 3
+  max_drawdown_limit: 0.20  # 20% max drawdown
+
+# Backtesting Settings
+backtesting:
+  start_date: "2020-01-01"
+  end_date: "2024-12-31"
+  initial_balance: 10000
+  transaction_cost: 0.001  # 0.1% commission
+  slippage: 0.0002  # 0.02% slippage
+  
+# Signal Generation
+signals:
+  validation_layers: 3  # ml_prediction, technical_confirmation, risk_check
+  validation_mode: "AND"  # AND (all must agree) or WEIGHTED (voting)
+  required_agreement: 0.75  # 75% of validators must agree
+  
+# OCR Settings
+ocr:
+  enabled: true
+  screen_region: null  # null = full screen, or [x1, y1, x2, y2]
+  update_interval: 5  # seconds
+  confidence_threshold: 0.85  # OCR confidence minimum
+
+# Performance Tracking
+performance:
+  track_metrics: true
+  benchmark_strategy: "buy_and_hold"
+  performance_update_interval: 300  # seconds
+
+# Notifications
+notifications:
+  enabled: true
+  audio_alerts: true
+  email_alerts: false
+  desktop_notifications: true
+  high_confidence_threshold: 0.85
+  
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/trading_system.log"
+  max_file_size: 10485760  # 10MB
