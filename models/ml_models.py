@@ -17,12 +17,15 @@ from utils.logger import setup_logger
 from config import config
 
 # Enable GPU memory growth to avoid OOM errors
+# Optimized for GTX 1060 6GB VRAM
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-            setup_logger(__name__).info(f"GPU enabled: {gpu}")
+        # Enable mixed precision (FP16) for 50% memory reduction
+        tf.keras.mixed_precision.set_global_policy('mixed_float16')
+        setup_logger(__name__).info(f"GPU enabled with mixed precision FP16: {gpus}")
     except RuntimeError as e:
         setup_logger(__name__).error(f"GPU configuration error: {e}")
 
@@ -86,23 +89,27 @@ class LSTMModel:
         
         logger.info("LSTM model created with GPU acceleration")
     
-    def train(self, X_train: np.ndarray, y_train: np.ndarray, epochs: int = 50, batch_size: int = 32, validation_split: float = 0.2):
+    def train(self, X_train: np.ndarray, y_train: np.ndarray, epochs: int = 150, batch_size: int = 32, validation_split: float = 0.2):
         """Train LSTM model with GPU acceleration.
+        Optimized for GTX 1060 6GB - high accuracy focus.
         
         Args:
             X_train: Training features
             y_train: Training targets
-            epochs: Number of training epochs
-            batch_size: Batch size
+            epochs: Number of training epochs (150 for accuracy)
+            batch_size: Batch size (32 optimal for GTX 1060)
             validation_split: Validation split ratio
         """
         if self.model is None:
             self.build_model(input_shape=(X_train.shape[1], X_train.shape[2]))
         
-        logger.info("Training LSTM model on GPU...")
+        logger.info("Training LSTM model on GPU (GTX 1060 optimized)...")
         
-        # Convert to GPU tensors if available
+        # Convert to GPU tensors with mixed precision
         if gpus:
+            X_train = tf.convert_to_tensor(X_train, dtype=tf.float16)
+            y_train = tf.convert_to_tensor(y_train, dtype=tf.float16)
+        else:
             X_train = tf.convert_to_tensor(X_train, dtype=tf.float32)
             y_train = tf.convert_to_tensor(y_train, dtype=tf.float32)
         
@@ -112,10 +119,25 @@ class LSTMModel:
                 epochs=epochs,
                 batch_size=batch_size,
                 validation_split=validation_split,
-                verbose=0
+                callbacks=[
+                    keras.callbacks.EarlyStopping(
+                        monitor='val_loss',
+                        patience=20,
+                        restore_best_weights=True,
+                        min_delta=0.0001
+                    ),
+                    keras.callbacks.ReduceLROnPlateau(
+                        monitor='val_loss',
+                        factor=0.5,
+                        patience=7,
+                        min_lr=1e-7,
+                        verbose=0
+                    )
+                ],
+                verbose=1
             )
         
-        logger.info(f"LSTM training complete on GPU. Final loss: {history.history['loss'][-1]:.6f}")
+        logger.info(f"LSTM training complete. Final loss: {history.history['loss'][-1]:.6f}")
         return history
     
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -208,12 +230,14 @@ class EnsembleModel:
         self.models['lstm'].build_model(input_shape=(X.shape[1], X.shape[2]))
         self.models['lstm'].train(X, y, epochs=epochs)
         
-        # XGBoost with GPU acceleration
-        logger.info("Training XGBoost on GPU...")
+        # XGBoost with GPU acceleration - optimized for GTX 1060
+        logger.info("Training XGBoost on GPU (GTX 1060 optimized)...")
         self.models['xgboost'] = xgb.XGBRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=6,
+            n_estimators=200,  # More trees for accuracy
+            learning_rate=0.05,  # Lower learning rate for precision
+            max_depth=5,  # Reduced depth for memory efficiency
+            subsample=0.8,  # Subsample for better generalization
+            colsample_bytree=0.8,  # Column subsample
             random_state=42,
             tree_method='gpu_hist',  # GPU-accelerated histogram
             gpu_id=0,  # Use first GPU
@@ -221,12 +245,16 @@ class EnsembleModel:
         )
         self.models['xgboost'].fit(X_flat, y_flat)
         
-        # LightGBM with GPU acceleration
-        logger.info("Training LightGBM on GPU...")
+        # LightGBM with GPU acceleration - optimized for GTX 1060
+        logger.info("Training LightGBM on GPU (GTX 1060 optimized)...")
         self.models['lightgbm'] = lgb.LGBMRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=6,
+            n_estimators=200,  # More trees for accuracy
+            learning_rate=0.05,  # Lower learning rate for precision
+            max_depth=5,  # Reduced depth for memory efficiency
+            num_leaves=31,  # Standard leaf count
+            feature_fraction=0.8,  # Feature bagging
+            bagging_fraction=0.8,  # Data bagging
+            bagging_freq=5,  # Bagging frequency
             random_state=42,
             device_type='gpu',  # Use GPU
             gpu_device_id=0  # Use first GPU

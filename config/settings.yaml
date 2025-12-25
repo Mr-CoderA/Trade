@@ -7,17 +7,22 @@ data:
   update_interval: 60  # seconds
   lookback_period: 5  # years for historical data
 
-# Model Settings
+# Model Settings - Optimized for GTX 1060 6GB with HIGH ACCURACY
 model:
   type: "ensemble"  # lstm, transformer, ensemble
   lookback_window: 60  # days of historical data for predictions
   forecast_horizon: 5  # days ahead
-  confidence_threshold: 0.75  # minimum confidence for trade signals
+  confidence_threshold: 0.80  # 80% minimum confidence for trade signals (high accuracy mode)
   cross_validation_folds: 5
   ensemble_weights:
-    lstm: 0.4
-    xgboost: 0.3
-    lightgbm: 0.3
+    lstm: 0.4  # 40% neural network
+    xgboost: 0.3  # 30% gradient boosting
+    lightgbm: 0.3  # 30% light gradient boosting
+  # GTX 1060 6GB optimization
+  batch_size: 32  # Small batch size for 6GB VRAM
+  epochs: 150  # More training for accuracy
+  learning_rate: 0.001  # Conservative learning rate
+  dropout_rate: 0.3  # Higher dropout for regularization
 
 # Technical Indicators
 indicators:
@@ -36,15 +41,15 @@ indicators:
   bollinger_bands_std: 2
   volume_period: 20
 
-# Risk Management
+# Risk Management - Conservative for High Accuracy
 risk:
   account_balance: 10000  # base account balance in USD
-  risk_per_trade: 0.02  # 2% risk per trade
-  max_position_size: 0.10  # max 10% of account
+  risk_per_trade: 0.01  # 1% risk per trade (conservative - fewer but higher confidence trades)
+  max_position_size: 0.05  # max 5% of account (conservative)
   stop_loss_atr_multiplier: 2.0
   take_profit_ratio: 2.0  # risk:reward ratio of 1:2
-  max_open_positions: 3
-  max_drawdown_limit: 0.20  # 20% max drawdown
+  max_open_positions: 2  # Reduced for quality over quantity
+  max_drawdown_limit: 0.10  # 10% max drawdown (tight - high accuracy focus)
 
 # Backtesting Settings
 backtesting:
